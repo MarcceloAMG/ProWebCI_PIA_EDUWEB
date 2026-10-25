@@ -31,14 +31,22 @@ header h1 a, header h2 a {
     text-decoration: none;
 }
 
+.auth-buttons {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap; /* Permite que los botones bajen si no caben */
+    justify-content: flex-end;
+}
+
 .auth-buttons a {
     color: white;
     text-decoration: none;
-    margin-left: 1rem;
     padding: 0.5rem 1rem;
     border-radius: 4px;
     border: 1px solid #38bdf8;
     transition: background-color 0.2s;
+    white-space: nowrap; /* Evita que el texto del botón se rompa */
 }
 
 .auth-buttons a.btn-primary {

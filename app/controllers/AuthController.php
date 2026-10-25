@@ -11,18 +11,32 @@ class AuthController extends Controller {
 
     public function processRegister() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $nombre = $_POST['fullname'] ?? '';
-            $email = $_POST['email'] ?? '';
-            $password = $_POST['password'] ?? '';
+           $nombre = $_POST['fullname'] ?? '';
+           $email = $_POST['email'] ?? '';
+           $password = $_POST['password'] ?? '';
+           $rol = $_POST['rol'] ?? 'estudiante'; 
+           
+           // 👇 AGREGAMOS ESTAS DOS LÍNEAS 👇
+           $genero = $_POST['gender'] ?? 'O'; 
+           $fecha_nacimiento = $_POST['birthdate'] ?? null;
+           
+           // Manejo de la imagen de perfil
+           $avatar_nombre = 'default.png';
+           if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
+               $ext = pathinfo($_FILES['avatar']['name'], PATHINFO_EXTENSION);
+               $avatar_nombre = uniqid('user_') . '.' . $ext;
+               $uploadDir = 'public/uploads/avatars/';
+               if (!is_dir($uploadDir)) { mkdir($uploadDir, 0777, true); }
+               move_uploaded_file($_FILES['avatar']['tmp_name'], $uploadDir . $avatar_nombre);
+           }
 
-            // Contraseña cifrada (Rúbrica)
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-
-            $userModel = new UserModel();
-            $registroExitoso = $userModel->createUser($nombre, $email, $hashed_password, 'estudiante');
+           $userModel = new UserModel();
+           $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+           
+           // 👇 ACTUALIZAMOS LA LLAMADA PARA ENVIAR LOS DATOS 👇
+           $registroExitoso = $userModel->createUser($nombre, $email, $hashed_password, $rol, $avatar_nombre, $genero, $fecha_nacimiento); 
 
             if ($registroExitoso) {
-                // Si se registra, lo mandamos al login
                 header("Location: " . BASE_URL . "index.php?controller=Auth&action=showLogin");
                 exit();
             } else {
@@ -40,23 +54,22 @@ class AuthController extends Controller {
             $user = $userModel->getUserByEmail($email);
 
             if ($user) {
-                // Validar si está bloqueado
                 if ($user['estado'] === 'bloqueado') {
                     $this->view('auth/login', ['error' => 'Tu cuenta está bloqueada. Contacta al administrador.']);
                     return;
                 }
 
-                // Validar contraseña
                 if (password_verify($password, $user['password'])) {
                     $userModel->updateFailedAttempts($user['id'], 0);
                     $_SESSION['user_id'] = $user['id'];
                     $_SESSION['rol'] = $user['rol'];
                     $_SESSION['nombre'] = $user['nombre_completo'];
+                    // NUEVO: Guardamos el avatar en la sesión
+                    $_SESSION['avatar'] = $user['avatar']; 
                     
                     header("Location: " . BASE_URL . "index.php?controller=Home&action=index");
                     exit();
                 } else {
-                    // Sumar intento fallido
                     $intentos = $user['intentos_fallidos'] + 1;
                     $userModel->updateFailedAttempts($user['id'], $intentos);
                     
@@ -71,5 +84,14 @@ class AuthController extends Controller {
                 $this->view('auth/login', ['error' => 'El correo no está registrado.']);
             }
         }
+    }
+
+    // --- NUEVA FUNCIÓN PARA CERRAR SESIÓN ---
+    public function logout() {
+        session_start();
+        session_unset();
+        session_destroy();
+        header("Location: " . BASE_URL . "index.php?controller=Home&action=index");
+        exit();
     }
 }

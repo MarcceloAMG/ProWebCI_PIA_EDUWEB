@@ -14,6 +14,7 @@ require_once 'core/Model.php';
 require_once 'core/Controller.php';
 require_once 'core/Router.php';
 
+
 // 3. Cargamos los middlewares
 require_once 'app/middleware/AuthMiddleware.php';
 require_once 'app/middleware/CorsMiddleware.php';
@@ -21,6 +22,7 @@ require_once 'app/middleware/CorsMiddleware.php';
 // 4. Cargamos los modelos
 require_once 'app/model/UserModel.php'; 
 require_once 'app/model/CourseModel.php';
+require_once 'app/model/CategoryModel.php'; 
 
 // 5. Ejecutamos el enrutador
 $router = new Router();

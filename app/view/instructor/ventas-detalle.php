@@ -4,11 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detalle de Alumnos - Instructor</title>
-    <link rel="stylesheet" href="styles.css">
+    <!-- AQUÍ ESTABA EL ERROR: Faltaba la ruta correcta del CSS -->
+    <link rel="stylesheet" href="<?= BASE_URL ?>public/styles.css">
 </head>
 <body>
     <header>
-        <h2><a href="instructor-ventas-resumen.html">← Volver al Resumen General</a></h2>
+        <!-- Corregido: Enlace usando el enrutador -->
+        <h2><a href="<?= BASE_URL ?>index.php?controller=Instructor&action=ventasResumen">← Volver al Resumen General</a></h2>
         <h1>Detalle del Curso: PHP Avanzado y POO</h1>
     </header>
 

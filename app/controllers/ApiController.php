@@ -8,21 +8,23 @@ class ApiController extends Controller {
         header("Content-Type: application/json; charset=UTF-8");
     }
 
-    // Endpoint 1: GET - Obtener todos los cursos
+      // Endpoint 1: GET - Obtener cursos (con filtros)
     public function getCursos() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-            $this->sendResponse(405, ["error" => "Método no permitido. Usa GET."]);
-            return;
-        }
+        $titulo = $_GET['titulo'] ?? '';
+        $categoria_id = isset($_GET['categoria_id']) ? (int)$_GET['categoria_id'] : 0;
 
         $courseModel = new CourseModel();
-        $cursos = $courseModel->getAllActiveCourses();
+        $cursos = $courseModel->getAllActiveCourses($titulo, $categoria_id);
 
-        if ($cursos) {
-            $this->sendResponse(200, ["status" => "success", "data" => $cursos]);
-        } else {
-            $this->sendResponse(404, ["error" => "No se encontraron cursos."]);
-        }
+        // Siempre devolvemos 200, aunque esté vacío, para que JS lo maneje fácil
+        $this->sendResponse(200, ["status" => "success", "data" => $cursos]);
+    }
+
+    // Endpoint 3: GET - Obtener categorías
+    public function getCategorias() {
+        $categoryModel = new CategoryModel();
+        $cats = $categoryModel->getAllCategories();
+        $this->sendResponse(200, ["status" => "success", "data" => $cats]);
     }
 
     // Endpoint 2: POST - Crear un nuevo curso

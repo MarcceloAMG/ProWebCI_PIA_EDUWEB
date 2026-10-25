@@ -9,9 +9,16 @@
 <body>
     <header>
         <h1><a href="<?= BASE_URL ?>index.php?controller=Admin&action=usuarios">EduWeb Central (Administrador)</a></h1>
-        <div class="auth-buttons"><a href="<?= BASE_URL ?>index.php?controller=Home&action=index" style="border-color:#ef4444; color:#ef4444;">Salir</a></div>
+            <div class="auth-buttons">
+                <!-- MENÚ DE NAVEGACIÓN ADMIN -->
+                <a href="<?= BASE_URL ?>index.php?controller=Admin&action=usuarios">Usuarios</a>
+                <a href="<?= BASE_URL ?>index.php?controller=Admin&action=categorias">Categorías</a>
+                <a href="<?= BASE_URL ?>index.php?controller=Admin&action=reportes">Reportes</a>
+                <a href="<?= BASE_URL ?>index.php?controller=Admin&action=comentarios">Comentarios</a>
+            
+                <a href="<?= BASE_URL ?>index.php?controller=Auth&action=logout" style="border-color:#ef4444; color:#ef4444; margin-left: 10px;">Salir</a>
+        </div>
     </header>
-
     <div class="student-layout">
         <h2 class="section-title">Lista de Usuarios Registrados</h2>
 
