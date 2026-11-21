@@ -7,9 +7,42 @@
     <link rel="stylesheet" href="<?= BASE_URL ?>public/styles.css">
 </head>
 <body>
-    <header>
-        <h1><a href="<?= BASE_URL ?>index.php?controller=Admin&action=categorias">EduWeb Central (Administrador)</a></h1>
-        <div class="auth-buttons"><a href="<?= BASE_URL ?>index.php?controller=Auth&action=logout" style="border-color:#ef4444; color:#ef4444;">Salir</a></div>
+        <header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background-color: #0f172a; color: white;">
+        <h1 style="margin: 0;"><a href="<?= BASE_URL ?>index.php?controller=Admin&action=usuarios" style="color: white; text-decoration: none;">EduWeb Central (Admin)</a></h1>
+        
+        <div class="auth-buttons" style="display: flex; align-items: center; gap: 15px;">
+            <!-- Enlaces de Navegación del Admin -->
+            <a href="<?= BASE_URL ?>index.php?controller=Admin&action=usuarios" style="border: none; padding: 0.5rem; font-size: 0.95rem;">Usuarios</a>
+            <a href="<?= BASE_URL ?>index.php?controller=Admin&action=categorias" style="border: none; padding: 0.5rem; font-size: 0.95rem;">Categorías</a>
+            <a href="<?= BASE_URL ?>index.php?controller=Admin&action=reportes" style="border: none; padding: 0.5rem; font-size: 0.95rem;">Reportes</a>
+            <a href="<?= BASE_URL ?>index.php?controller=Admin&action=comentarios" style="border: none; padding: 0.5rem; font-size: 0.95rem;">Comentarios</a>
+            <a href="<?= BASE_URL ?>index.php?controller=Admin&action=cursos">Cursos</a>
+            <!-- Botón de Ir al Inicio -->
+            <a href="<?= BASE_URL ?>index.php?controller=Home&action=index" style="color: #38bdf8; border: 1px solid #38bdf8; padding: 0.5rem 1rem; border-radius: 4px; text-decoration: none; font-size: 0.95rem; margin-left: 10px;">Ir al Inicio</a>
+            
+            <!-- Menú de Perfil Desplegable -->
+            <div class="profile-menu-container" style="margin-left: 10px;">
+                <div class="profile-trigger">
+                    <?php 
+                        $avatarFile = $_SESSION['avatar'] ?? '';
+                        $rutaFisica = 'public/uploads/avatars/' . $avatarFile;
+                        if (!empty($avatarFile) && file_exists($rutaFisica)): 
+                    ?>
+                        <img src="<?= BASE_URL ?>public/uploads/avatars/<?= htmlspecialchars($avatarFile) ?>" alt="Avatar" class="profile-avatar-img">
+                    <?php else: ?>
+                        <div class="profile-avatar-fallback"><?= strtoupper(substr($_SESSION['nombre'] ?? 'U', 0, 1)) ?></div>
+                    <?php endif; ?>
+                </div>
+                <div class="profile-dropdown">
+                    <div class="dropdown-header">
+                        <strong><?= htmlspecialchars($_SESSION['nombre']) ?></strong>
+                        <span><?= ucfirst($_SESSION['rol']) ?></span>
+                    </div>
+                    <a href="<?= BASE_URL ?>index.php?controller=Student&action=perfil">Editar Perfil</a>
+                    <a href="<?= BASE_URL ?>index.php?controller=Auth&action=logout" style="color: #ef4444;">Cerrar Sesión</a>
+                </div>
+            </div>
+        </div>
     </header>
 
     <div class="student-layout">
@@ -35,6 +68,7 @@
 
             <!-- Tabla Dinámica -->
             <div>
+                <!-- Solo reemplaza la tabla de la vista que ya tenías -->
                 <table class="report-table">
                     <thead>
                         <tr>
@@ -45,17 +79,14 @@
                     </thead>
                     <tbody>
                         <?php if(empty($categorias)): ?>
-                            <tr>
-                                <td colspan="3" style="text-align:center;">No hay categorías registradas aún.</td>
-                            </tr>
+                            <tr><td colspan="3" style="text-align:center;">No hay categorías registradas aún.</td></tr>
                         <?php else: ?>
                             <?php foreach($categorias as $cat): ?>
                                 <tr>
-                                    <td><strong><?= htmlspecialchars($cat['nombre'] ?? '') ?></strong></td>
-                                    <!-- AQUÍ ESTÁ EL CAMBIO: Agregamos ?? '' por si está vacío -->
-                                    <td><?= htmlspecialchars($cat['descripcion'] ?? '') ?></td>
+                                    <td><strong><?= htmlspecialchars($cat['nombre']) ?></strong></td>
+                                    <td><?= htmlspecialchars($cat['descripcion']) ?></td>
                                     <td>
-                                        <button class="btn-status blocked" style="padding:2px 6px;" onclick="confirm('¿Dar de baja lógica a esta categoría?')">Eliminar</button>
+                                        <a href="<?= BASE_URL ?>index.php?controller=Admin&action=deleteCategory&id=<?= $cat['id'] ?>" class="btn-status blocked" style="text-decoration:none;" onclick="return confirm('¿Eliminar esta categoría?');">Eliminar</a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -65,5 +96,6 @@
             </div>
         </div>
     </div>
+    <script src="<?= BASE_URL ?>public/js/profile-menu.js"></script>
 </body>
 </html>

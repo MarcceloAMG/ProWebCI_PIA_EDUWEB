@@ -7,31 +7,24 @@
     <link rel="stylesheet" href="<?= BASE_URL ?>public/styles.css">
 </head>
 <body>
-         <header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background-color: #0f172a; color: white;">
+    <header style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background-color: #0f172a; color: white;">
         <h1 style="margin: 0;"><a href="<?= BASE_URL ?>index.php?controller=Home&action=index" style="color: white; text-decoration: none;">EduWeb</a></h1>
         
-        <!-- Contenedor de botones y perfil alineados a la derecha -->
         <div class="auth-buttons" style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap; justify-content: flex-end;">
             <?php if(isset($_SESSION['user_id'])): ?>
-                
-                <!-- Bloque de Perfil Clickable con Menú Desplegable -->
                 <div class="profile-menu-container">
                     <div class="profile-trigger">
                         <?php 
                             $avatarFile = $_SESSION['avatar'] ?? '';
                             $rutaFisica = 'public/uploads/avatars/' . $avatarFile;
-                            
                             if (!empty($avatarFile) && file_exists($rutaFisica)): 
                         ?>
                             <img src="<?= BASE_URL ?>public/uploads/avatars/<?= htmlspecialchars($avatarFile) ?>" alt="Avatar" class="profile-avatar-img">
                         <?php else: ?>
-                            <div class="profile-avatar-fallback">
-                                <?= strtoupper(substr($_SESSION['nombre'] ?? 'U', 0, 1)) ?>
-                            </div>
+                            <div class="profile-avatar-fallback"><?= strtoupper(substr($_SESSION['nombre'] ?? 'U', 0, 1)) ?></div>
                         <?php endif; ?>
                     </div>
                     
-                    <!-- Menú que se despliega -->
                     <div class="profile-dropdown">
                         <div class="dropdown-header">
                             <strong><?= htmlspecialchars($_SESSION['nombre']) ?></strong>
@@ -52,14 +45,13 @@
                 </div>
             
             <?php else: ?>
-                <!-- Si NO hay sesión, mostramos estos dos botones -->
                 <a href="<?= BASE_URL ?>index.php?controller=Auth&action=showLogin" style="color: white; text-decoration: none; padding: 0.5rem 1rem; border-radius: 4px; border: 1px solid #38bdf8; white-space: nowrap;">Iniciar Sesión</a>
                 <a href="<?= BASE_URL ?>index.php?controller=Auth&action=showRegister" style="background-color: #38bdf8; color: #0f172a; text-decoration: none; padding: 0.5rem 1rem; border-radius: 4px; font-weight: bold; border: none; white-space: nowrap;">Registrarse</a>
             <?php endif; ?>
         </div>
     </header>
 
-        <div class="hero-course">
+    <div class="hero-course">
         <div class="hero-img" style="background-image: url('<?= BASE_URL ?>public/uploads/<?= htmlspecialchars($curso['imagen'] ?? 'default.jpg') ?>'); background-size: cover; background-position: center;">
             <?php if(empty($curso['imagen'])): ?> Imagen del Curso <?php endif; ?>
         </div>
@@ -81,10 +73,8 @@
                         
                         <!-- Contenedor de Botones de Pago -->
                         <div style="display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 350px;">
-                            <!-- Botón de PayPal -->
                             <div id="paypal-button-container" style="width: 100%;"></div>
                             
-                            <!-- Opción 2: Transferencia -->
                             <a href="<?= BASE_URL ?>index.php?controller=Course&action=enroll&id=<?= $curso['id'] ?>&metodo=transferencia" 
                                class="btn-action" 
                                style="display:flex; justify-content:center; align-items:center; background-color:#475569; height: 45px; border-radius: 4px; text-decoration: none; color: white; font-weight: bold; width: 100%; box-sizing: border-box;">
@@ -100,45 +90,34 @@
             <!-- Lado Derecho: Video Trailer -->
             <div style="flex: 1; min-width: 300px;">
                 <?php 
-                    $videoUrl = null;
-                    if (!empty($niveles) && !empty($niveles[0]['video_url'])) {
-                        $videoUrl = $niveles[0]['video_url'];
-                        if (strpos($videoUrl, 'youtube.com/watch?v=') !== false) {
-                            $videoId = explode('v=', $videoUrl)[1];
-                            $videoUrl = "https://www.youtube.com/embed/" . $videoId;
-                        } elseif (strpos($videoUrl, 'youtu.be/') !== false) {
-                            $videoId = explode('youtu.be/', $videoUrl)[1];
-                            $videoUrl = "https://www.youtube.com/embed/" . $videoId;
-                        }
-                    }
+                    $trailer = $curso['video_trailer'] ?? ''; 
+                    $esLinkTrailer = (strpos($trailer, 'http') === 0);
                 ?>
-
-                <?php if ($videoUrl): ?>
-                    <div style="background-color: #1e293b; border-radius: 8px; overflow: hidden; position: relative; padding-bottom: 56.25%;">
+                <div style="background-color: #000; border-radius: 8px; overflow: hidden; position: relative; padding-bottom: 56.25%;">
+                    <?php if ($esLinkTrailer): ?>
+                        <?php 
+                            $videoId = '';
+                            if (strpos($trailer, 'youtube.com/watch?v=') !== false) {
+                                $videoId = explode('v=', $trailer)[1];
+                            } elseif (strpos($trailer, 'youtu.be/') !== false) {
+                                $videoId = explode('youtu.be/', $trailer)[1];
+                            }
+                            $embedUrl = $videoId ? "https://www.youtube.com/embed/" . $videoId : $trailer;
+                        ?>
                         <iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" 
-                                src="<?= htmlspecialchars($videoUrl) ?>" 
-                                allowfullscreen>
-                        </iframe>
-                    </div>
-                    <p style="text-align: center; color: #94a3b8; font-size: 0.85rem; margin-top: 0.5rem;">Video de presentación</p>
-                <?php else: ?>
-                    <div style="background-color: #1e293b; border-radius: 8px; overflow: hidden; position: relative; padding-bottom: 56.25%;">
-                        <iframe style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" 
-                                src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=0" 
-                                allowfullscreen>
-                        </iframe>
-                    </div>
-                    <p style="text-align: center; color: #eab308; font-size: 0.85rem; margin-top: 0.5rem; font-weight: bold;">
-                        ⚠️ El instructor no ha subido un video. Disfruta de este clásico.
-                    </p>
-                <?php endif; ?>
+                                src="<?= htmlspecialchars($embedUrl) ?>" allowfullscreen></iframe>
+                    <?php else: ?>
+                        <video style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" controls>
+                            <source src="<?= BASE_URL ?>public/uploads/videos/<?= htmlspecialchars($trailer) ?>" type="video/mp4">
+                        </video>
+                    <?php endif; ?>
+                </div>
+                <p style="text-align: center; color: #94a3b8; font-size: 0.85rem; margin-top: 0.5rem;">Video de presentación del curso</p>
             </div>
-
         </div>
     </div>
-    <!-- AQUÍ SE CIERRA EL HERO COURSE (Fondo oscuro) -->
 
-    <!-- Contenedor de Descripción (Fondo claro) -->
+    <!-- Contenedor de Descripción -->
     <div class="detail-container">
         <div class="course-body" style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
             <h3 style="color: #0f172a; margin-bottom: 1rem;">Descripción del Contenido</h3>
@@ -176,6 +155,47 @@
             <p>📂 <strong>Categoría:</strong> <?= empty($categorias) ? 'Sin categoría' : htmlspecialchars(implode(', ', $categorias)) ?></p>
             <p>👤 <strong>Instructor:</strong> <?= htmlspecialchars($curso['instructor']) ?></p>
         </aside>
+
+        <!-- ========================================== -->
+        <!-- NUEVA SECCIÓN: COMENTARIOS Y RESEÑAS       -->
+        <!-- ========================================== -->
+        <div class="course-body" style="grid-column: 1 / -1; margin-top: 2rem; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <h3 style="color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 1.5rem;">
+                Reseñas de Alumnos (<?= count($comentarios ?? []) ?>)
+            </h3>
+            
+            <?php if(empty($comentarios)): ?>
+                <p style="color: #64748b; font-style: italic;">Este curso aún no tiene reseñas. Los alumnos pueden calificarlo una vez que lo terminen.</p>
+            <?php else: ?>
+                <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                    <?php foreach($comentarios as $c): ?>
+                        <div style="border-bottom: 1px solid #f1f5f9; padding-bottom: 1rem;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.5rem;">
+                                <?php $rutaAv = 'public/uploads/avatars/' . $c['avatar']; ?>
+                                <?php if(!empty($c['avatar']) && file_exists($rutaAv)): ?>
+                                    <img src="<?= BASE_URL . $rutaAv ?>" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                                <?php else: ?>
+                                    <div style="width: 40px; height: 40px; border-radius: 50%; background: #cbd5e1; display:flex; align-items:center; justify-content:center; font-weight:bold; color:#475569;">
+                                        <?= strtoupper(substr($c['nombre_completo'], 0, 1)) ?>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <div>
+                                    <strong style="color: #0f172a; display: block;"><?= htmlspecialchars($c['nombre_completo']) ?></strong>
+                                    <span style="font-size: 0.8rem; color: #94a3b8;"><?= date('d/m/Y', strtotime($c['fecha_creacion'])) ?></span>
+                                </div>
+                                
+                                <div style="margin-left: auto; color: #eab308; font-size: 1.2rem;">
+                                    <?= str_repeat('★', $c['calificacion']) . str_repeat('☆', 5 - $c['calificacion']) ?>
+                                </div>
+                            </div>
+                            <p style="color: #334155; margin: 0; padding-left: 50px;"><?= nl2br(htmlspecialchars($c['comentario'])) ?></p>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+
     </div>
 
     <!-- SDK de PayPal -->
@@ -203,5 +223,6 @@
             }).render('#paypal-button-container');
         }
     </script>
+    <script src="<?= BASE_URL ?>public/js/profile-menu.js"></script>
 </body>
 </html>

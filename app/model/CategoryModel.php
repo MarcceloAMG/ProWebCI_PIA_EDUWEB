@@ -15,4 +15,10 @@ class CategoryModel extends Model {
         $stmt->bindParam(':creador', $creado_por);
         return $stmt->execute();
     }
+
+        public function deleteCategory($id) {
+        $stmt = $this->db->prepare("DELETE FROM categorias WHERE id = :id");
+        $stmt->bindParam(':id', $id);
+        return $stmt->execute();
+    }
 }

@@ -23,6 +23,8 @@ require_once 'app/middleware/CorsMiddleware.php';
 require_once 'app/model/UserModel.php'; 
 require_once 'app/model/CourseModel.php';
 require_once 'app/model/CategoryModel.php'; 
+require_once 'app/model/MessageModel.php';  // <-- AGREGA ESTA LÍNEA
+require_once 'app/model/CommentModel.php';  // <-- Y ESTA OTRA
 
 // 5. Ejecutamos el enrutador
 $router = new Router();

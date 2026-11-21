@@ -1,6 +1,12 @@
 <?php
 class AuthController extends Controller {
     
+    private $userModel;
+
+    public function __construct($userModel) {
+        $this->userModel = $userModel;
+    }
+
     public function showLogin() { 
         $this->view('auth/login'); 
     }
@@ -16,11 +22,9 @@ class AuthController extends Controller {
            $password = $_POST['password'] ?? '';
            $rol = $_POST['rol'] ?? 'estudiante'; 
            
-           // 👇 AGREGAMOS ESTAS DOS LÍNEAS 👇
            $genero = $_POST['gender'] ?? 'O'; 
            $fecha_nacimiento = $_POST['birthdate'] ?? null;
            
-           // Manejo de la imagen de perfil
            $avatar_nombre = 'default.png';
            if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
                $ext = pathinfo($_FILES['avatar']['name'], PATHINFO_EXTENSION);
@@ -30,11 +34,9 @@ class AuthController extends Controller {
                move_uploaded_file($_FILES['avatar']['tmp_name'], $uploadDir . $avatar_nombre);
            }
 
-           $userModel = new UserModel();
            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
            
-           // 👇 ACTUALIZAMOS LA LLAMADA PARA ENVIAR LOS DATOS 👇
-           $registroExitoso = $userModel->createUser($nombre, $email, $hashed_password, $rol, $avatar_nombre, $genero, $fecha_nacimiento); 
+           $registroExitoso = $this->userModel->createUser($nombre, $email, $hashed_password, $rol, $avatar_nombre, $genero, $fecha_nacimiento); 
 
             if ($registroExitoso) {
                 header("Location: " . BASE_URL . "index.php?controller=Auth&action=showLogin");
@@ -50,8 +52,7 @@ class AuthController extends Controller {
             $email = $_POST['email'] ?? '';
             $password = $_POST['password'] ?? '';
 
-            $userModel = new UserModel();
-            $user = $userModel->getUserByEmail($email);
+            $user = $this->userModel->getUserByEmail($email);
 
             if ($user) {
                 if ($user['estado'] === 'bloqueado') {
@@ -60,21 +61,20 @@ class AuthController extends Controller {
                 }
 
                 if (password_verify($password, $user['password'])) {
-                    $userModel->updateFailedAttempts($user['id'], 0);
+                    $this->userModel->updateFailedAttempts($user['id'], 0);
                     $_SESSION['user_id'] = $user['id'];
                     $_SESSION['rol'] = $user['rol'];
                     $_SESSION['nombre'] = $user['nombre_completo'];
-                    // NUEVO: Guardamos el avatar en la sesión
                     $_SESSION['avatar'] = $user['avatar']; 
                     
                     header("Location: " . BASE_URL . "index.php?controller=Home&action=index");
                     exit();
                 } else {
                     $intentos = $user['intentos_fallidos'] + 1;
-                    $userModel->updateFailedAttempts($user['id'], $intentos);
+                    $this->userModel->updateFailedAttempts($user['id'], $intentos);
                     
                     if ($intentos >= 3) {
-                        $userModel->blockUser($user['id']);
+                        $this->userModel->blockUser($user['id']);
                         $this->view('auth/login', ['error' => 'Contraseña incorrecta. Has alcanzado 3 intentos. Cuenta BLOQUEADA.']);
                     } else {
                         $this->view('auth/login', ['error' => 'Contraseña incorrecta. Intento ' . $intentos . ' de 3.']);
@@ -86,7 +86,6 @@ class AuthController extends Controller {
         }
     }
 
-    // --- NUEVA FUNCIÓN PARA CERRAR SESIÓN ---
     public function logout() {
         session_start();
         session_unset();

@@ -1,43 +1,70 @@
 <?php
 class StudentController extends Controller {
     
+    private $courseModel;
+    private $userModel;
+    private $messageModel;
+    private $commentModel;
+    private $categoryModel; // <-- Nueva propiedad
+
+    // Agrega $categoryModel al constructor
+    public function __construct($courseModel, $userModel, $messageModel, $commentModel, $categoryModel) {
+        $this->courseModel = $courseModel;
+        $this->userModel = $userModel;
+        $this->messageModel = $messageModel;
+        $this->commentModel = $commentModel;
+        $this->categoryModel = $categoryModel; // <-- Asignación
+    }
+
+
     public function kardex() { 
         AuthMiddleware::checkAccess(['estudiante']); 
         
-        $courseModel = new CourseModel();
-        $misCursos = $courseModel->getEnrolledCourses($_SESSION['user_id']);
+        // Capturamos los filtros de la URL (si no vienen, están vacíos)
+        $fecha_inicio = $_GET['fecha_inicio'] ?? '';
+        $fecha_fin = $_GET['fecha_fin'] ?? '';
+        $categoria_id = isset($_GET['categoria_id']) ? (int)$_GET['categoria_id'] : 0;
+        $completado = $_GET['completado'] ?? '';
+        $estatus_curso = $_GET['estatus_curso'] ?? '';
+
+        // Buscamos los cursos aplicando los filtros
+        $misCursos = $this->courseModel->getEnrolledCourses(
+            $_SESSION['user_id'], 
+            $fecha_inicio, 
+            $fecha_fin, 
+            $categoria_id, 
+            $completado, 
+            $estatus_curso
+        );
         
-        $this->view('student/kardex', ['cursos' => $misCursos]); 
+        // Traemos todas las categorías para el select
+        $categorias = $this->categoryModel->getAllCategories();
+        
+        $this->view('student/kardex', [
+            'cursos' => $misCursos,
+            'categorias' => $categorias
+        ]); 
     }
 
     public function fase() { 
         AuthMiddleware::checkAccess(['estudiante']); 
         
-        $courseModel = new CourseModel();
         $curso_id = isset($_GET['curso_id']) ? (int)$_GET['curso_id'] : 0;
         $nivel_id = isset($_GET['nivel_id']) ? (int)$_GET['nivel_id'] : 0;
         
-        // Si venimos del Kardex (solo con curso_id)
         if ($curso_id > 0 && $nivel_id == 0) {
-            $niveles = $courseModel->getLevelsByCourse($curso_id);
-            
-            // Si no hay niveles, lanzamos una alerta de JS y lo regresamos al Kardex
+            $niveles = $this->courseModel->getLevelsByCourse($curso_id);
             if (empty($niveles)) {
                 echo "<script>
-                        alert('⚠️ Este curso aún no tiene niveles ni clases registradas. Por favor, contacta al instructor.');
+                        alert('⚠️ Este curso aún no tiene niveles ni clases registradas.');
                         window.location.href = '" . BASE_URL . "index.php?controller=Student&action=kardex';
                       </script>";
                 exit();
             }
-            
-            // Si sí hay niveles, tomamos el ID del primero
             $nivel_id = $niveles[0]['id'];
         }
 
-        // Buscamos la info del nivel
-        $nivel = $courseModel->getLevelById($nivel_id);
-        
-        // Si el nivel no existe (porque le pasaron un ID falso por URL)
+        $nivel = $this->courseModel->getLevelById($nivel_id);
         if (!$nivel) {
             echo "<script>
                     alert('⚠️ Error: El nivel solicitado no existe.');
@@ -46,16 +73,9 @@ class StudentController extends Controller {
             exit();
         }
 
-        // Obtenemos el ID de la inscripción
-        $stmt = (new Database())->getConnection()->prepare("SELECT id, porcentaje_avance FROM inscripciones WHERE estudiante_id = :student AND curso_id = :curso");
-        $stmt->execute([':student' => $_SESSION['user_id'], ':curso' => $nivel['curso_id']]);
-        $inscripcion = $stmt->fetch();
+        $inscripcion = $this->courseModel->getInscription($nivel['curso_id'], $_SESSION['user_id']);
+        $mensajes = $this->messageModel->getChatMessages($nivel['curso_id'], $_SESSION['user_id']);
 
-        // Cargamos los mensajes (Chat)
-        $messageModel = new MessageModel();
-        $mensajes = $messageModel->getChatMessages($nivel['curso_id'], $_SESSION['user_id']);
-
-        // Si todo está bien, cargamos la vista
         $this->view('student/fase', [
             'nivel' => $nivel,
             'inscripcion' => $inscripcion ? $inscripcion : ['id' => 0, 'porcentaje_avance' => 0],
@@ -65,15 +85,19 @@ class StudentController extends Controller {
 
     public function completeLevel() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['inscripcion_id'])) {
-            $courseModel = new CourseModel();
+            $inscripcion_id = $_POST['inscripcion_id'];
+            $nivel_orden = (int)$_POST['nivel_orden']; 
             
-            // Calculamos el nuevo porcentaje basado en el nivel actual
-            $porcentaje_actual = (float)$_POST['porcentaje_actual'];
-            $nuevo_porcentaje = $porcentaje_actual + 34; // Sumamos aprox 33.3% por nivel
+            $curso_id = $this->courseModel->getCourseIdByInscription($inscripcion_id);
+            $niveles = $this->courseModel->getLevelsByCourse($curso_id);
+            $total_niveles = count($niveles);
             
+            $nuevo_porcentaje = ($total_niveles > 0) ? ($nivel_orden / $total_niveles) * 100 : 100;
             if ($nuevo_porcentaje > 100) $nuevo_porcentaje = 100;
             
-            $courseModel->updateProgress($_POST['inscripcion_id'], $_POST['nivel_orden'], $nuevo_porcentaje);
+            $siguiente_nivel = $nivel_orden + 1;
+            $this->courseModel->updateProgress($inscripcion_id, $siguiente_nivel, $nuevo_porcentaje);
+            
             header("Location: " . BASE_URL . "index.php?controller=Student&action=kardex");
             exit();
         }
@@ -81,8 +105,7 @@ class StudentController extends Controller {
 
     public function sendMessage() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $messageModel = new MessageModel();
-            $messageModel->sendMessage(
+            $this->messageModel->sendMessage(
                 $_SESSION['user_id'], 
                 $_POST['receptor_id'], 
                 $_POST['curso_id'], 
@@ -110,8 +133,7 @@ class StudentController extends Controller {
             $comentario = $_POST['review'] ?? '';
 
             if ($curso_id > 0 && !empty($comentario)) {
-                $commentModel = new CommentModel();
-                $commentModel->createComment($curso_id, $_SESSION['user_id'], $calificacion, $comentario);
+                $this->commentModel->createComment($curso_id, $_SESSION['user_id'], $calificacion, $comentario);
             }
 
             header("Location: " . BASE_URL . "index.php?controller=Student&action=kardex");
@@ -125,8 +147,7 @@ class StudentController extends Controller {
             exit();
         }
         
-        $userModel = new UserModel();
-        $user = $userModel->getUserById($_SESSION['user_id']);
+        $user = $this->userModel->getUserById($_SESSION['user_id']);
         $this->view('student/perfil', ['user' => $user]); 
     }
 
@@ -158,8 +179,7 @@ class StudentController extends Controller {
                 }
             }
 
-            $userModel = new UserModel();
-            $userModel->updateUser($id, $nombre, $genero, $fecha, $email, $password, $avatar_nombre);
+            $this->userModel->updateUser($id, $nombre, $genero, $fecha, $email, $password, $avatar_nombre);
 
             $_SESSION['nombre'] = $nombre;
             $_SESSION['avatar'] = $avatar_nombre;
@@ -167,5 +187,19 @@ class StudentController extends Controller {
             header("Location: " . BASE_URL . "index.php?controller=Student&action=perfil");
             exit();
         }
+    }
+    public function certificado() {
+        AuthMiddleware::checkAccess(['estudiante']);
+        
+        $curso_id = isset($_GET['curso_id']) ? (int)$_GET['curso_id'] : 0;
+        
+        $datos = $this->courseModel->getCertificateData($_SESSION['user_id'], $curso_id);
+        
+        if (!$datos || empty($datos['fecha_terminacion'])) {
+            header("Location: " . BASE_URL . "index.php?controller=Student&action=kardex");
+            exit();
+        }
+        
+        $this->view('student/certificado', ['datos' => $datos]);
     }
 }

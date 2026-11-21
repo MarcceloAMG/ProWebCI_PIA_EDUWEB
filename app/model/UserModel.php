@@ -59,4 +59,36 @@ class UserModel extends Model {
         $stmt->bindParam(':id', $userId);
         return $stmt->execute();
     }
+        // Para la tabla de usuarios del admin
+    public function getAllUsers() {
+        $stmt = $this->db->prepare("SELECT * FROM usuarios ORDER BY fecha_registro DESC");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    // Reporte de Instructores
+    public function getInstructorReport() {
+        $stmt = $this->db->prepare("
+            SELECT u.email as usuario, u.nombre_completo, u.fecha_registro,
+                   (SELECT COUNT(id) FROM cursos WHERE instructor_id = u.id) as total_cursos,
+                   (SELECT IFNULL(SUM(p.monto), 0) FROM pagos p JOIN inscripciones i ON p.inscripcion_id = i.id JOIN cursos c ON i.curso_id = c.id WHERE c.instructor_id = u.id) as total_ganancias
+            FROM usuarios u
+            WHERE u.rol = 'instructor' AND u.estado = 'activo'
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    // Reporte de Estudiantes
+    public function getStudentReport() {
+        $stmt = $this->db->prepare("
+            SELECT u.email as usuario, u.nombre_completo, u.fecha_registro,
+                   (SELECT COUNT(id) FROM inscripciones WHERE estudiante_id = u.id) as total_cursos,
+                   (SELECT IFNULL(AVG(porcentaje_avance), 0) FROM inscripciones WHERE estudiante_id = u.id) as promedio_avance
+            FROM usuarios u
+            WHERE u.rol = 'estudiante' AND u.estado = 'activo'
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
 }
