@@ -1,68 +1,79 @@
-document.addEventListener("DOMContentLoaded", () => {
-    const courseGrid = document.getElementById("course-grid-container");
-    const listaCategorias = document.getElementById("lista-categorias");
-    const selectCategorias = document.getElementById("search-categoria");
-    const btnBuscar = document.getElementById("btn-buscar");
+document.addEventListener('DOMContentLoaded', function() {
+    cargarCategorias();
+    cargarCursos();
 
-    // 1. CARGAR CATEGORÍAS DINÁMICAS
+    document.getElementById('btn-buscar').addEventListener('click', function() {
+        cargarCursos();
+    });
+    
+    document.getElementById('orden-cursos').addEventListener('change', function() {
+        cargarCursos();
+    });
+});
+
+function cargarCategorias() {
     fetch(BASE_URL + 'index.php?controller=Api&action=getCategorias')
-        .then(res => res.json())
+        .then(response => response.json())
         .then(data => {
-            if (data.status === "success") {
+            const lista = document.getElementById('lista-categorias');
+            const select = document.getElementById('search-categoria');
+            
+            if(data.status === 'success') {
                 data.data.forEach(cat => {
-                    // Llenamos el menú lateral con enlaces para filtrar
-                    listaCategorias.innerHTML += `<li><a href="#" onclick="filtrarPorCategoria(${cat.id}); return false;">${cat.nombre}</a></li>`;
-                    // Llenamos el select del buscador
-                    selectCategorias.innerHTML += `<option value="${cat.id}">${cat.nombre}</option>`;
+                    lista.innerHTML += `<li onclick="filtrarPorCategoria(${cat.id})" style="cursor:pointer; padding: 5px 0;">${cat.nombre}</li>`;
+                    select.innerHTML += `<option value="${cat.id}">${cat.nombre}</option>`;
                 });
             }
         })
-        .catch(err => console.error("Error categorías:", err));
+        .catch(error => console.error('Error categorías:', error));
+}
 
-    // 2. FUNCIÓN PARA CARGAR CURSOS (Con filtros opcionales)
-    function cargarCursos(titulo = '', categoria_id = 0) {
-        courseGrid.innerHTML = '<p>Cargando...</p>';
-        
-        fetch(`${BASE_URL}index.php?controller=Api&action=getCursos&titulo=${titulo}&categoria_id=${categoria_id}`)
-            .then(res => res.json())
-            .then(data => {
-                courseGrid.innerHTML = '';
-                if (data.data.length > 0) {
-                    data.data.forEach(curso => {
-                        courseGrid.innerHTML += `
-                            <a href="${BASE_URL}index.php?controller=Course&action=detail&id=${curso.id}" class="course-card">
-                                <div class="course-img">Imagen del Curso</div>
-                                <div class="course-info">
-                                    <h4>${curso.titulo}</h4>
-                                    <p style="font-size:0.85rem; color:#64748b;">${curso.descripcion}</p>
-                                    <div class="course-price">$${parseFloat(curso.costo).toFixed(2)}</div>
-                                </div>
-                            </a>
-                        `;
-                    });
-                } else {
-                    courseGrid.innerHTML = '<p style="width:100%; text-align:center;">No se encontraron cursos.</p>';
-                }
-            })
-            .catch(err => {
-                courseGrid.innerHTML = '<p style="color:red; width:100%;">Error al cargar cursos.</p>';
-            });
-    }
+function cargarCursos(titulo = '', categoria_id = 0) {
+    const orden = document.getElementById('orden-cursos').value;
+    const url = `${BASE_URL}index.php?controller=Api&action=getCursos&titulo=${titulo}&categoria_id=${categoria_id}&orden=${orden}`;
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            const contenedor = document.getElementById('course-grid-container');
+            contenedor.innerHTML = '';
 
-    // 3. EVENTO DEL BOTÓN BUSCAR
-    btnBuscar.addEventListener("click", () => {
-        const txt = document.getElementById("search-titulo").value;
-        const catId = document.getElementById("search-categoria").value;
-        cargarCursos(txt, catId);
-    });
+            if (data.status === 'success' && data.data.length > 0) {
+                data.data.forEach(curso => {
+                    const imgUrl = curso.imagen ? `${BASE_URL}public/uploads/${curso.imagen}` : `${BASE_URL}public/uploads/default.jpg`;
+                    
+                    // Calculamos la calificación de forma segura
+                    let textoCalificacion = 'Sin calificaciones';
+                    if (curso.promedio_calificacion && parseFloat(curso.promedio_calificacion) > 0) {
+                        textoCalificacion = '⭐ ' + parseFloat(curso.promedio_calificacion).toFixed(1);
+                    }
 
-    // 4. FUNCIÓN GLOBAL (Para los clics del menú lateral)
-    window.filtrarPorCategoria = (id) => {
-        selectCategorias.value = id; // Sincroniza el select
-        document.getElementById("search-titulo").value = ''; // Limpia el buscador de texto
-        cargarCursos('', id);
-    };
+                    const ventas = curso.total_ventas || 0;
 
-    // 5. CARGA INICIAL (Al entrar a la página)
-    cargarCursos();
-});
+                    // Armamos la tarjeta
+                    contenedor.innerHTML += `
+                        <div class="course-card">
+                            <img src="${imgUrl}" alt="${curso.titulo}" class="course-img" onerror="this.src='${BASE_URL}public/uploads/default.jpg'">
+                            <div class="course-info">
+                                <h4>${curso.titulo}</h4>
+                                <p style="color:#64748b; font-size:0.85rem; margin-bottom:0.5rem;">
+                                    ${textoCalificacion} (${ventas} alumnos)
+                                </p>
+                                <p style="font-weight:bold; color:#059669; margin-bottom:1rem;">$${parseFloat(curso.costo).toFixed(2)}</p>
+                                <a href="${BASE_URL}index.php?controller=Course&action=detail&id=${curso.id}" class="btn-action" style="display:block; text-align:center;">Ver Detalle</a>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                contenedor.innerHTML = '<p>No se encontraron cursos disponibles.</p>';
+            }
+        })
+        .catch(error => console.error('Error cursos:', error));
+}
+
+function filtrarPorCategoria(id) {
+    document.getElementById('search-categoria').value = id;
+    const titulo = document.getElementById('search-titulo').value;
+    cargarCursos(titulo, id);
+}

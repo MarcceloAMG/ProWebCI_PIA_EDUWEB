@@ -8,15 +8,14 @@ class ApiController extends Controller {
         header("Content-Type: application/json; charset=UTF-8");
     }
 
-      // Endpoint 1: GET - Obtener cursos (con filtros)
-    public function getCursos() {
+          public function getCursos() {
         $titulo = $_GET['titulo'] ?? '';
         $categoria_id = isset($_GET['categoria_id']) ? (int)$_GET['categoria_id'] : 0;
+        $orden = $_GET['orden'] ?? 'recientes'; // Capturamos el nuevo parámetro
 
         $courseModel = new CourseModel();
-        $cursos = $courseModel->getAllActiveCourses($titulo, $categoria_id);
+        $cursos = $courseModel->getAllActiveCourses($titulo, $categoria_id, $orden);
 
-        // Siempre devolvemos 200, aunque esté vacío, para que JS lo maneje fácil
         $this->sendResponse(200, ["status" => "success", "data" => $cursos]);
     }
 

@@ -1,7 +1,7 @@
 <?php
 class CourseController extends Controller {
     
-    public function detail() {
+       public function detail() {
         $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
         $courseModel = new CourseModel();
         
@@ -13,16 +13,21 @@ class CourseController extends Controller {
 
         $niveles = $courseModel->getLevelsByCourse($id);
         
-        // Verificamos si el usuario está logueado y es estudiante para ver si está inscrito
         $isEnrolled = false;
         if (isset($_SESSION['user_id']) && $_SESSION['rol'] === 'estudiante') {
             $isEnrolled = $courseModel->isEnrolled($_SESSION['user_id'], $id);
         }
+        
+        // NUEVO: Traemos las categorías y el promedio
+        $categorias = $courseModel->getCategoriesByCourse($id);
+        $promedio = $courseModel->getAverageRating($id);
 
         $this->view('public/course-detail', [
             'curso' => $curso,
             'niveles' => $niveles,
-            'isEnrolled' => $isEnrolled
+            'isEnrolled' => $isEnrolled,
+            'categorias' => $categorias,
+            'promedio' => $promedio
         ]);
     }
 

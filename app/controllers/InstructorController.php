@@ -37,13 +37,18 @@ class InstructorController extends Controller {
             $descripcion = $_POST['descripcion'] ?? '';
             $costo = $_POST['price'] ?? 0;
 
-            // Manejo de la imagen de portada
+                     // Manejo de la imagen de portada
             $imagen_nombre = 'default.jpg';
             if (isset($_FILES['cover']) && $_FILES['cover']['error'] === UPLOAD_ERR_OK) {
                 $ext = pathinfo($_FILES['cover']['name'], PATHINFO_EXTENSION);
                 $imagen_nombre = uniqid('course_') . '.' . $ext;
-                // Asegúrate de tener creada la carpeta public/uploads/
-                move_uploaded_file($_FILES['cover']['tmp_name'], '../public/uploads/' . $imagen_nombre);
+                
+                // Ruta absoluta a la carpeta public/uploads
+                $uploadDir = __DIR__ . '/../../public/uploads/'; 
+                
+                if (!is_dir($uploadDir)) { mkdir($uploadDir, 0777, true); }
+                
+                move_uploaded_file($_FILES['cover']['tmp_name'], $uploadDir . $imagen_nombre);
             }
 
             $courseModel = new CourseModel();

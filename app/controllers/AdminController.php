@@ -40,8 +40,23 @@ class AdminController extends Controller {
         $this->view('admin/reportes'); 
     }
     
-    public function comentarios() { 
+       public function comentarios() { 
         AuthMiddleware::checkAccess(['administrador']); 
-        $this->view('admin/comentarios'); 
+        
+        $commentModel = new CommentModel();
+        $comentarios = $commentModel->getAllComments();
+        
+        $this->view('admin/comentarios', ['comentarios' => $comentarios]); 
+    }
+
+    public function deleteComment() {
+        AuthMiddleware::checkAccess(['administrador']); 
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['comentario_id'])) {
+            $commentModel = new CommentModel();
+            $causa = $_POST['causa'] ?? 'Sin causa especificada';
+            $commentModel->deleteComment($_POST['comentario_id'], $causa);
+        }
+        header("Location: " . BASE_URL . "index.php?controller=Admin&action=comentarios");
+        exit();
     }
 }
