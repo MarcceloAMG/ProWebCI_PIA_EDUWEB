@@ -50,24 +50,7 @@
                     <th>Alumnos Inscritos</th>
                     <th>Progreso Promedio</th>
                     <th>Total Ingresos</th>
-                    <td style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                                <a href="<?= BASE_URL ?>index.php?controller=Instructor&action=ventasDetalle&id=<?= $curso['id'] ?>" class="btn-action" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">Ver Detalle</a>
-                                
-                                <?php if($curso['activo'] == 1): ?>
-                                    <a href="<?= BASE_URL ?>index.php?controller=Instructor&action=toggleCourse&id=<?= $curso['id'] ?>&status=0" 
-                                       class="btn-action" 
-                                       style="font-size: 0.8rem; padding: 0.4rem 0.8rem; background-color: #ef4444;"
-                                       onclick="return confirm('¿Seguro que quieres dar de baja este curso? Ya no aparecerá en el catálogo público.');">
-                                       Dar de Baja
-                                    </a>
-                                <?php else: ?>
-                                    <a href="<?= BASE_URL ?>index.php?controller=Instructor&action=toggleCourse&id=<?= $curso['id'] ?>&status=1" 
-                                       class="btn-action" 
-                                       style="font-size: 0.8rem; padding: 0.4rem 0.8rem; background-color: #10b981;">
-                                       Reactivar Curso
-                                    </a>
-                                <?php endif; ?>
-                            </td>
+                    <th scope="col">Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -83,7 +66,18 @@
                             <td><?= number_format($curso['promedio_avance'], 0) ?>%</td>
                             <td style="color: #059669; font-weight: bold;">$<?= number_format($curso['total_ingresos'], 2) ?></td>
                             <td>
-                                <a href="<?= BASE_URL ?>index.php?controller=Instructor&action=ventasDetalle&id=<?= $curso['id'] ?>" class="btn-action" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">Ver Detalle</a>
+                                <?php $activo = (int) $curso['activo'] === 1; ?>
+                                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                    <a href="<?= BASE_URL ?>index.php?controller=Instructor&amp;action=ventasDetalle&amp;id=<?= (int) $curso['id'] ?>" class="btn-action" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">Ver Detalle</a>
+                                    <form method="post" action="<?= BASE_URL ?>index.php?controller=Instructor&amp;action=toggleCourse" <?php if ($activo): ?>onsubmit="return confirm('¿Seguro que quieres dar de baja este curso? Ya no aparecerá en el catálogo público.');"<?php endif; ?>>
+                                        <input type="hidden" name="id" value="<?= (int) $curso['id'] ?>">
+                                        <input type="hidden" name="status" value="<?= $activo ? 0 : 1 ?>">
+                                        <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf_curso_estado, ENT_QUOTES, 'UTF-8') ?>">
+                                        <button type="submit" class="btn-action" style="font-size: 0.8rem; padding: 0.4rem 0.8rem; border: 0; cursor: pointer; background-color: <?= $activo ? '#ef4444' : '#10b981' ?>;">
+                                            <?= $activo ? 'Dar de Baja' : 'Reactivar Curso' ?>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>

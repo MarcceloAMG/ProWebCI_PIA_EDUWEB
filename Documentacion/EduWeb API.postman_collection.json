@@ -1,0 +1,45 @@
+{
+  "info": {
+    "_postman_id": "1357cebc-dbc3-4a1f-9542-0fb6833da3f6",
+    "name": "EduWeb API",
+    "description": "### Welcome to Postman! This is your first collection. \n\nCollections are your starting point for building and testing APIs. You can use this one to:\n\n• Group related requests\n• Test your API in real-world scenarios\n• Document and share your requests\n\nUpdate the name and overview whenever you’re ready to make it yours.\n\n[Learn more about Postman Collections.](https://learning.postman.com/docs/collections/collections-overview/)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "60348661",
+    "_collection_link": "https://go.postman.co/collection/60348661-1357cebc-dbc3-4a1f-9542-0fb6833da3f6?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "ObtenerCursos",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": ""
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "ObtenerCategorias",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": ""
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CrearCurso",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": ""
+        }
+      },
+      "response": []
+    }
+  ]
+}

@@ -62,7 +62,7 @@
             <div style="flex: 1; min-width: 300px;">
                 <h2 style="margin-top:0;"><?= htmlspecialchars($curso['titulo']) ?></h2>
                 <p style="margin-bottom: 1rem;"><?= nl2br(htmlspecialchars($curso['descripcion'])) ?></p>
-                <div class="price-tag" style="margin-bottom: 1.5rem;">Costo Completo: $<?= number_format($curso['costo'], 2) ?></div>
+                <div class="price-tag" style="margin-bottom: 1.5rem;">Costo Completo: $<?= number_format($curso['costo'], 2) ?> <?= htmlspecialchars(PAYPAL_CURRENCY, ENT_QUOTES, 'UTF-8') ?></div>
                 
                 <?php if(isset($_SESSION['user_id'])): ?>
                     <?php if($_SESSION['rol'] !== 'estudiante'): ?>
@@ -73,7 +73,9 @@
                         
                         <!-- Contenedor de Botones de Pago -->
                         <div style="display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 350px;">
-                            <div id="paypal-button-container" style="width: 100%;"></div>
+                            <?php $_SESSION['paypal_csrf'] ??= bin2hex(random_bytes(32)); ?>
+                            <div id="paypal-button-container" style="width: 100%;" data-csrf="<?= htmlspecialchars($_SESSION['paypal_csrf'], ENT_QUOTES, 'UTF-8') ?>"></div>
+                            <p id="paypal-status" role="status" aria-live="polite" hidden></p>
                             
                             <a href="<?= BASE_URL ?>index.php?controller=Course&action=enroll&id=<?= $curso['id'] ?>&metodo=transferencia" 
                                class="btn-action" 
@@ -199,28 +201,77 @@
     </div>
 
     <!-- SDK de PayPal -->
-    <script src="https://www.paypal.com/sdk/js?client-id=<?= PAYPAL_CLIENT_ID ?>&currency=USD"></script>
+    <script src="https://www.paypal.com/sdk/js?client-id=<?= rawurlencode(PAYPAL_CLIENT_ID) ?>&amp;currency=<?= rawurlencode(PAYPAL_CURRENCY) ?>"></script>
     <script>
-        if (document.getElementById('paypal-button-container')) {
-            paypal.Buttons({
-                createOrder: function(data, actions) {
-                    return actions.order.create({
-                        purchase_units: [{
-                            amount: { value: '<?= number_format($curso['costo'], 2, '.', '') ?>' },
-                            description: 'Curso: <?= htmlspecialchars($curso['titulo']) ?>'
-                        }]
-                    });
-                },
-                onApprove: function(data, actions) {
-                    return actions.order.capture().then(function(details) {
-                        window.location.href = '<?= BASE_URL ?>index.php?controller=Payment&action=capture&course_id=<?= $curso['id'] ?>&order_id=' + data.orderID;
-                    });
-                },
-                onError: function (err) {
-                    alert('Hubo un error con el pago. Intenta de nuevo.');
-                    console.error(err);
+        const paypalContainer = document.getElementById('paypal-button-container');
+        if (paypalContainer) {
+            const paypalStatus = document.getElementById('paypal-status');
+            const paymentUrl = <?= json_encode(BASE_URL . 'index.php?controller=Payment&action=', JSON_HEX_TAG) ?>;
+            const courseId = <?= (int) $curso['id'] ?>;
+            let navigating = false;
+
+            function showPayPalStatus(message) {
+                paypalStatus.textContent = message;
+                paypalStatus.hidden = message === '';
+            }
+
+            function goToKardex(redirect) {
+                navigating = true;
+                window.location.assign(redirect);
+            }
+
+            async function requestPayPal(action, payload = {}) {
+                const response = await fetch(paymentUrl + action, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': paypalContainer.dataset.csrf
+                    },
+                    body: JSON.stringify({course_id: courseId, ...payload})
+                });
+                const result = await response.json();
+                if (!response.ok && !result.restart) {
+                    throw new Error(result.error || 'Hubo un error con PayPal.');
                 }
-            }).render('#paypal-button-container');
+                return result;
+            }
+
+            if (window.paypal) {
+                paypal.Buttons({
+                    async createOrder() {
+                        showPayPalStatus('Preparando pago…');
+                        const order = await requestPayPal('createOrder');
+                        showPayPalStatus('');
+                        if (order.redirect) {
+                            goToKardex(order.redirect);
+                            return;
+                        }
+                        return order.id;
+                    },
+                    async onApprove(data, actions) {
+                        showPayPalStatus('Confirmando el pago…');
+                        const result = await requestPayPal('capture', {order_id: data.orderID});
+                        if (result.restart) {
+                            showPayPalStatus(result.error);
+                            return actions.restart();
+                        }
+                        if (!result.redirect) throw new Error('PayPal necesita que apruebes la orden de nuevo.');
+                        goToKardex(result.redirect);
+                    },
+                    onCancel() {
+                        showPayPalStatus('');
+                    },
+                    onError(error) {
+                        if (!navigating) {
+                            showPayPalStatus(error?.message || 'Hubo un error con PayPal. Intenta de nuevo.');
+                        }
+                    }
+                }).render('#paypal-button-container').catch(() => {
+                    showPayPalStatus('No se pudo abrir el formulario de PayPal.');
+                });
+            } else {
+                showPayPalStatus('No se pudo cargar PayPal.');
+            }
         }
     </script>
     <script src="<?= BASE_URL ?>public/js/profile-menu.js"></script>

@@ -26,7 +26,8 @@ class InstructorController extends Controller {
 
         $this->view('instructor/ventas-resumen', [
             'cursos' => $cursos,
-            'total_global' => $total_global
+            'total_global' => $total_global,
+            'csrf_curso_estado' => $_SESSION['csrf_curso_estado'] ??= bin2hex(random_bytes(32))
         ]); 
     }
 
@@ -174,11 +175,27 @@ class InstructorController extends Controller {
         }
     }
 
-        public function toggleCourse() {
+    public function toggleCourse() {
         AuthMiddleware::checkAccess(['instructor']);
-        if (isset($_GET['id']) && isset($_GET['status'])) {
-            $this->courseModel->toggleCourseStatus($_GET['id'], $_GET['status']);
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Allow: POST');
+            http_response_code(405);
+            exit();
         }
+        $token = $_POST['csrf'] ?? null;
+        if (!is_string($token) || empty($_SESSION['csrf_curso_estado'])
+            || !hash_equals($_SESSION['csrf_curso_estado'], $token)) {
+            http_response_code(403);
+            exit('Recarga el panel para volver a intentarlo.');
+        }
+        $course_id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $status = $_POST['status'] ?? null;
+        if (!$course_id || !in_array($status, ['0', '1'], true)) {
+            http_response_code(400);
+            exit('Curso o estado inválido.');
+        }
+
+        $this->courseModel->toggleCourseStatus($course_id, (int) $status, (int) $_SESSION['user_id']);
         header("Location: " . BASE_URL . "index.php?controller=Instructor&action=ventasResumen");
         exit();
     }

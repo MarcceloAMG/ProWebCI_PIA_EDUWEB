@@ -118,6 +118,38 @@ class CourseModel extends Model {
         return $stmt->execute();
     }
 
+    // Una confirmación de PayPal registra la inscripción y el pago como una sola operación.
+    public function registerPayPalPurchase(int $studentId, int $courseId, string $amount): void {
+        $this->db->beginTransaction();
+        try {
+            $lock = $this->db->prepare('SELECT id FROM usuarios WHERE id = ? FOR UPDATE');
+            $lock->execute([$studentId]);
+            if (!$lock->fetchColumn()) {
+                throw new RuntimeException('El estudiante ya no existe.');
+            }
+            $query = $this->db->prepare('SELECT id FROM inscripciones WHERE estudiante_id = ? AND curso_id = ? ORDER BY id LIMIT 1');
+            $query->execute([$studentId, $courseId]);
+            $enrollmentId = $query->fetchColumn();
+            if ($enrollmentId === false) {
+                $this->enroll($studentId, $courseId);
+                $enrollmentId = $this->db->lastInsertId();
+            }
+
+            $query = $this->db->prepare("SELECT id FROM pagos WHERE inscripcion_id = ? AND metodo_pago = 'PayPal'");
+            $query->execute([$enrollmentId]);
+            if ($query->fetchColumn() === false) {
+                $payment = $this->db->prepare("INSERT INTO pagos (inscripcion_id, monto, metodo_pago) VALUES (?, ?, 'PayPal')");
+                $payment->execute([$enrollmentId, $amount]);
+            }
+            $this->db->commit();
+        } catch (Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
+    }
+
     // Obtener los datos de un nivel específico
     public function getLevelById($nivel_id) {
         $stmt = $this->db->prepare("
@@ -221,7 +253,7 @@ class CourseModel extends Model {
     // Resumen de ventas
     public function getSalesSummaryByInstructor($instructor_id) {
         $stmt = $this->db->prepare("
-            SELECT c.id, c.titulo, 
+            SELECT c.id, c.titulo, c.activo,
                    (SELECT COUNT(id) FROM inscripciones WHERE curso_id = c.id) as total_alumnos,
                    (SELECT IFNULL(AVG(porcentaje_avance), 0) FROM inscripciones WHERE curso_id = c.id) as promedio_avance,
                    (SELECT IFNULL(SUM(monto), 0) FROM pagos p JOIN inscripciones i ON p.inscripcion_id = i.id WHERE i.curso_id = c.id) as total_ingresos
@@ -294,11 +326,14 @@ class CourseModel extends Model {
         return $stmt->fetchAll();
     }
         // Cambiar el estado de un curso (Activo / Inactivo)
-    public function toggleCourseStatus($course_id, $status) {
-        $stmt = $this->db->prepare("UPDATE cursos SET activo = :status WHERE id = :id");
-        $stmt->bindParam(':status', $status);
-        $stmt->bindParam(':id', $course_id);
-        return $stmt->execute();
+    public function toggleCourseStatus($course_id, $status, $instructor_id = null) {
+        $sql = "UPDATE cursos SET activo = :status WHERE id = :id";
+        $params = ['status' => $status, 'id' => $course_id];
+        if ($instructor_id !== null) {
+            $sql .= " AND instructor_id = :instructor_id";
+            $params['instructor_id'] = $instructor_id;
+        }
+        return $this->db->prepare($sql)->execute($params);
     }
 
     // Obtener TODOS los cursos para el panel del Administrador
